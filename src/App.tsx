@@ -9,6 +9,12 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Professionals from "./pages/Professionals";
 import HowItWorks from "./pages/HowItWorks";
+import ProfessionalDetail from "./pages/ProfessionalDetail";
+import Payment from "./pages/Payment";
+import MyAppointments from "./pages/MyAppointments";
+import Notifications from "./pages/Notifications";
+import Chat from "./pages/Chat";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +30,12 @@ const App = () => (
           <Route path="/registro" element={<Register />} />
           <Route path="/profesionales" element={<Professionals />} />
           <Route path="/como-funciona" element={<HowItWorks />} />
+          <Route path="/profesional/:id" element={<ProfessionalDetail />} />
+          <Route path="/pago" element={<Payment />} />
+          <Route path="/mis-citas" element={<MyAppointments />} />
+          <Route path="/notificaciones" element={<Notifications />} />
+          <Route path="/chat/:appointmentId" element={<Chat />} />
+          <Route path="/perfil" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
