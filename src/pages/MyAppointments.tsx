@@ -205,18 +205,24 @@ const MyAppointments = () => {
 
       if (error) throw error;
 
-      // Get client ID for notification
+      // Get appointment details for notification and Google Calendar
       const appointment = professionalAppointments.find((apt) => apt.id === appointmentId);
       if (appointment) {
-        const { data: apptData } = await supabase
+        // Get full appointment data including emails
+        const { data: fullAppointment } = await supabase
           .from("appointments")
-          .select("client_id")
+          .select(`
+            *,
+            profiles:client_id(email, full_name),
+            professionals(user_id, profiles:user_id(email, full_name))
+          `)
           .eq("id", appointmentId)
           .single();
 
-        if (apptData?.client_id) {
+        if (fullAppointment?.client_id) {
+          // Create notification
           await supabase.from("notifications").insert({
-            user_id: apptData.client_id,
+            user_id: fullAppointment.client_id,
             type: "cita_aceptada",
             title: "Cita Aceptada",
             message: `Tu cita para el ${format(
@@ -226,13 +232,52 @@ const MyAppointments = () => {
             )} a las ${appointment.start_time.slice(0, 5)} ha sido aceptada.`,
             appointment_id: appointmentId,
           });
-        }
-      }
 
-      toast({
-        title: "Cita aceptada",
-        description: "La cita ha sido aceptada correctamente",
-      });
+          // Create Google Calendar event
+          try {
+            const calendarResponse = await supabase.functions.invoke(
+              'google-calendar-integration',
+              {
+                body: {
+                  appointmentId: appointmentId,
+                  professionalEmail: fullAppointment.professionals?.profiles?.email || '',
+                  clientEmail: fullAppointment.profiles?.email || '',
+                  appointmentDate: fullAppointment.appointment_date,
+                  appointmentTime: fullAppointment.start_time,
+                  professionalName: fullAppointment.professionals?.profiles?.full_name || 'Profesional',
+                  clientName: fullAppointment.profiles?.full_name || 'Cliente',
+                }
+              }
+            );
+
+            if (calendarResponse.error) {
+              console.error('Google Calendar error:', calendarResponse.error);
+              // Don't throw, just log - appointment is already accepted
+              toast({
+                title: "Cita aceptada",
+                description: "Cita aceptada pero no se pudo crear el evento en Google Calendar",
+              });
+            } else {
+              toast({
+                title: "Cita aceptada",
+                description: "La cita ha sido aceptada y agregada a Google Calendar",
+              });
+            }
+          } catch (calendarError) {
+            console.error('Failed to create calendar event:', calendarError);
+            // Don't throw - appointment is already accepted
+            toast({
+              title: "Cita aceptada",
+              description: "Cita aceptada correctamente",
+            });
+          }
+        }
+      } else {
+        toast({
+          title: "Cita aceptada",
+          description: "La cita ha sido aceptada correctamente",
+        });
+      }
 
       loadUserData();
     } catch (error: any) {
