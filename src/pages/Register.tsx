@@ -60,11 +60,30 @@ const Register = () => {
       if (error) throw error;
 
       if (data.user) {
+        // If registering as professional, create professional record
+        if (formData.role === "profesional") {
+          const { error: profError } = await supabase
+            .from("professionals")
+            .insert({
+              user_id: data.user.id,
+              profession: "Por definir",
+              bio: "Completa tu perfil para empezar a recibir citas",
+              price_per_hour: 0,
+              is_active: false, // Inactive until they complete their profile
+            });
+
+          if (profError) {
+            console.error("Error creating professional record:", profError);
+          }
+        }
+
         toast({
           title: "¡Registro exitoso!",
-          description: "Tu cuenta ha sido creada correctamente",
+          description: formData.role === "profesional" 
+            ? "Tu cuenta ha sido creada. Completa tu perfil profesional para activar tu cuenta"
+            : "Tu cuenta ha sido creada correctamente",
         });
-        navigate("/");
+        navigate(formData.role === "profesional" ? "/perfil" : "/");
       }
     } catch (error: any) {
       toast({

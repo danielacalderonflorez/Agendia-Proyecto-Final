@@ -151,6 +151,27 @@ const Profile = () => {
     setSaving(true);
 
     try {
+      // Validate professional data
+      if (!professional.profession || professional.profession === "Por definir" || professional.profession.trim() === "") {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Por favor ingresa tu profesión",
+        });
+        setSaving(false);
+        return;
+      }
+
+      if (!professional.price_per_hour || professional.price_per_hour <= 0) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Por favor ingresa un precio por hora válido",
+        });
+        setSaving(false);
+        return;
+      }
+
       if (professional.id) {
         const { error } = await supabase
           .from("professionals")
@@ -158,6 +179,7 @@ const Profile = () => {
             profession: professional.profession,
             bio: professional.bio,
             price_per_hour: professional.price_per_hour,
+            is_active: true, // Activate profile when completed
           })
           .eq("id", professional.id);
 
@@ -168,6 +190,7 @@ const Profile = () => {
           profession: professional.profession,
           bio: professional.bio,
           price_per_hour: professional.price_per_hour,
+          is_active: true,
         });
 
         if (error) throw error;
@@ -175,7 +198,7 @@ const Profile = () => {
 
       toast({
         title: "Datos profesionales actualizados",
-        description: "Tu información profesional ha sido guardada",
+        description: "Tu perfil ha sido activado y ahora estás visible para los clientes",
       });
       setEditingProfessional(false);
       loadProfileData();
@@ -322,94 +345,118 @@ const Profile = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Profesión</Label>
-                  {editingProfessional ? (
-                    <Input
-                      value={professional?.profession || ""}
-                      onChange={(e) =>
-                        setProfessional((p) =>
-                          p ? { ...p, profession: e.target.value } : null
-                        )
-                      }
-                      placeholder="Ej: Psicólogo, Abogado, Ingeniero"
-                    />
-                  ) : (
-                    <p className="text-lg">{professional?.profession || "No especificado"}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label>Biografía</Label>
-                  {editingProfessional ? (
-                    <Textarea
-                      value={professional?.bio || ""}
-                      onChange={(e) =>
-                        setProfessional((p) => (p ? { ...p, bio: e.target.value } : null))
-                      }
-                      placeholder="Cuéntanos sobre tu experiencia..."
-                      rows={4}
-                    />
-                  ) : (
+                {!professional ? (
+                  <div className="text-center py-6 space-y-4">
                     <p className="text-muted-foreground">
-                      {professional?.bio || "No especificado"}
+                      Aún no has configurado tu perfil profesional
                     </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2">
-                    <DollarSign className="h-4 w-4" />
-                    Precio por Hora
-                  </Label>
-                  {editingProfessional ? (
-                    <Input
-                      type="number"
-                      value={professional?.price_per_hour || ""}
-                      onChange={(e) =>
-                        setProfessional((p) =>
-                          p ? { ...p, price_per_hour: parseFloat(e.target.value) } : null
-                        )
-                      }
-                    />
-                  ) : (
-                    <p className="text-lg font-semibold text-secondary">
-                      ${professional?.price_per_hour || 0}
-                    </p>
-                  )}
-                </div>
-                {editingProfessional ? (
-                  <div className="flex gap-2">
-                    <Button onClick={handleSaveProfessional} disabled={saving}>
-                      Guardar
-                    </Button>
-                    <Button
-                      variant="outline"
+                    <Button 
                       onClick={() => {
-                        setEditingProfessional(false);
-                        loadProfileData();
+                        setProfessional({
+                          id: "",
+                          profession: "",
+                          bio: "",
+                          price_per_hour: 0,
+                        });
+                        setEditingProfessional(true);
                       }}
                     >
-                      Cancelar
+                      Crear Perfil Profesional
                     </Button>
                   </div>
                 ) : (
-                  <Button onClick={() => setEditingProfessional(true)}>
-                    Editar Información Profesional
-                  </Button>
+                  <>
+                    <div className="space-y-2">
+                      <Label>Profesión</Label>
+                      {editingProfessional ? (
+                        <Input
+                          value={professional?.profession || ""}
+                          onChange={(e) =>
+                            setProfessional((p) =>
+                              p ? { ...p, profession: e.target.value } : null
+                            )
+                          }
+                          placeholder="Ej: Psicólogo, Abogado, Ingeniero"
+                        />
+                      ) : (
+                        <p className="text-lg">{professional?.profession || "No especificado"}</p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Biografía</Label>
+                      {editingProfessional ? (
+                        <Textarea
+                          value={professional?.bio || ""}
+                          onChange={(e) =>
+                            setProfessional((p) => (p ? { ...p, bio: e.target.value } : null))
+                          }
+                          placeholder="Cuéntanos sobre tu experiencia..."
+                          rows={4}
+                        />
+                      ) : (
+                        <p className="text-muted-foreground">
+                          {professional?.bio || "No especificado"}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        Precio por Hora
+                      </Label>
+                      {editingProfessional ? (
+                        <Input
+                          type="number"
+                          value={professional?.price_per_hour || ""}
+                          onChange={(e) =>
+                            setProfessional((p) =>
+                              p ? { ...p, price_per_hour: parseFloat(e.target.value) } : null
+                            )
+                          }
+                        />
+                      ) : (
+                        <p className="text-lg font-semibold text-secondary">
+                          ${professional?.price_per_hour || 0}
+                        </p>
+                      )}
+                    </div>
+                    {editingProfessional ? (
+                      <div className="flex gap-2">
+                        <Button onClick={handleSaveProfessional} disabled={saving}>
+                          Guardar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setEditingProfessional(false);
+                            loadProfileData();
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button onClick={() => setEditingProfessional(true)}>
+                        Editar Información Profesional
+                      </Button>
+                    )}
+                  </>
                 )}
               </CardContent>
             </Card>
 
-            {/* Availability Management */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarIcon className="h-5 w-5" />
-                  Gestión de Disponibilidad
-                </CardTitle>
-                <CardDescription>
-                  Configura los horarios en los que puedes atender clientes
-                </CardDescription>
-              </CardHeader>
+            {/* Availability Management - Only show if professional profile exists */}
+            {professional && professional.id && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarIcon className="h-5 w-5" />
+                    Gestión de Disponibilidad
+                  </CardTitle>
+                  <CardDescription>
+                    Configura los horarios en los que puedes atender clientes
+                  </CardDescription>
+                </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
                   <h3 className="font-semibold">Horarios Actuales</h3>
@@ -514,6 +561,7 @@ const Profile = () => {
                 </div>
               </CardContent>
             </Card>
+            )}
           </>
         )}
 
