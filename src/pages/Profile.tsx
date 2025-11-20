@@ -445,6 +445,38 @@ const Profile = () => {
               </CardContent>
             </Card>
 
+            {/* Quick Access - Only show if professional profile exists and is active */}
+            {professional && professional.id && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Accesos Rápidos</CardTitle>
+                  <CardDescription>Gestiona tus citas y revisa tu rendimiento</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Button 
+                      onClick={() => navigate('/calendario')}
+                      className="h-24 flex flex-col gap-2"
+                      variant="outline"
+                    >
+                      <CalendarIcon className="h-8 w-8" />
+                      <span className="font-semibold">Mi Calendario</span>
+                      <span className="text-xs text-muted-foreground">Vista de citas programadas</span>
+                    </Button>
+                    <Button 
+                      onClick={() => navigate('/estadisticas')}
+                      className="h-24 flex flex-col gap-2"
+                      variant="outline"
+                    >
+                      <Briefcase className="h-8 w-8" />
+                      <span className="font-semibold">Estadísticas</span>
+                      <span className="text-xs text-muted-foreground">Analiza tu rendimiento</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Availability Management - Only show if professional profile exists */}
             {professional && professional.id && (
               <Card>
