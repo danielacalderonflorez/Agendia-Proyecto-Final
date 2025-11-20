@@ -15,6 +15,8 @@ import MyAppointments from "./pages/MyAppointments";
 import Notifications from "./pages/Notifications";
 import Chat from "./pages/Chat";
 import Profile from "./pages/Profile";
+import ProfessionalStats from "./pages/ProfessionalStats";
+import ProfessionalCalendar from "./pages/ProfessionalCalendar";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +38,8 @@ const App = () => (
           <Route path="/notificaciones" element={<Notifications />} />
           <Route path="/chat/:appointmentId" element={<Chat />} />
           <Route path="/perfil" element={<Profile />} />
+          <Route path="/estadisticas" element={<ProfessionalStats />} />
+          <Route path="/calendario" element={<ProfessionalCalendar />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -59,6 +59,8 @@ const MyAppointments = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [cancellationReason, setCancellationReason] = useState("");
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [filterClient, setFilterClient] = useState<string>("todas");
+  const [filterProfessional, setFilterProfessional] = useState<string>("todas");
 
   useEffect(() => {
     loadUserData();
@@ -558,19 +560,41 @@ const MyAppointments = () => {
 
         {/* Client Appointments */}
         <div className="mb-12">
-          <h2 className="text-2xl font-semibold mb-4">Como Cliente</h2>
-          {appointments.length === 0 ? (
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-semibold">Como Cliente</h2>
+            <select
+              value={filterClient}
+              onChange={(e) => setFilterClient(e.target.value)}
+              className="px-4 py-2 border rounded-md bg-background text-foreground"
+            >
+              <option value="todas">Todas</option>
+              <option value="pendiente_aceptacion">Por Confirmar</option>
+              <option value="aceptada">Confirmadas</option>
+              <option value="completada">Completadas</option>
+              <option value="cancelada">Canceladas</option>
+              <option value="rechazada">Rechazadas</option>
+            </select>
+          </div>
+          {appointments.filter(a => filterClient === 'todas' || a.status === filterClient).length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">No tienes citas como cliente</p>
-                <Button asChild className="mt-4">
-                  <a href="/profesionales">Buscar Profesionales</a>
-                </Button>
+                <p className="text-muted-foreground">
+                  {appointments.length === 0 
+                    ? "No tienes citas como cliente" 
+                    : "No hay citas con este filtro"}
+                </p>
+                {appointments.length === 0 && (
+                  <Button asChild className="mt-4">
+                    <a href="/profesionales">Buscar Profesionales</a>
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ) : (
             <div className="grid md:grid-cols-2 gap-6">
-              {appointments.map((apt) => renderAppointmentCard(apt, false))}
+              {appointments
+                .filter(a => filterClient === 'todas' || a.status === filterClient)
+                .map((apt) => renderAppointmentCard(apt, false))}
             </div>
           )}
         </div>
@@ -578,16 +602,36 @@ const MyAppointments = () => {
         {/* Professional Appointments */}
         {userRole === "profesional" && (
           <div>
-            <h2 className="text-2xl font-semibold mb-4">Como Profesional</h2>
-            {professionalAppointments.length === 0 ? (
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold">Como Profesional</h2>
+              <select
+                value={filterProfessional}
+                onChange={(e) => setFilterProfessional(e.target.value)}
+                className="px-4 py-2 border rounded-md bg-background text-foreground"
+              >
+                <option value="todas">Todas</option>
+                <option value="pendiente_aceptacion">Por Confirmar</option>
+                <option value="aceptada">Confirmadas</option>
+                <option value="completada">Completadas</option>
+                <option value="cancelada">Canceladas</option>
+                <option value="rechazada">Rechazadas</option>
+              </select>
+            </div>
+            {professionalAppointments.filter(a => filterProfessional === 'todas' || a.status === filterProfessional).length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">No tienes citas como profesional</p>
+                  <p className="text-muted-foreground">
+                    {professionalAppointments.length === 0 
+                      ? "No tienes citas como profesional" 
+                      : "No hay citas con este filtro"}
+                  </p>
                 </CardContent>
               </Card>
             ) : (
               <div className="grid md:grid-cols-2 gap-6">
-                {professionalAppointments.map((apt) => renderAppointmentCard(apt, true))}
+                {professionalAppointments
+                  .filter(a => filterProfessional === 'todas' || a.status === filterProfessional)
+                  .map((apt) => renderAppointmentCard(apt, true))}
               </div>
             )}
           </div>
