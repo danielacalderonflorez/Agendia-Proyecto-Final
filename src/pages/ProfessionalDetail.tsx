@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -203,10 +203,11 @@ const ProfessionalDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-[#f9fafb] font-['Poppins',sans-serif]">
         <Navbar />
         <div className="container mx-auto px-4 py-12 text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-[#2563eb] border-t-transparent"></div>
+          <p className="mt-4 text-[#6b7280] text-base">Cargando...</p>
         </div>
       </div>
     );
@@ -214,116 +215,170 @@ const ProfessionalDetail = () => {
 
   if (!professional) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-[#f9fafb] font-['Poppins',sans-serif]">
         <Navbar />
         <div className="container mx-auto px-4 py-12 text-center">
-          <h1 className="text-2xl font-bold">Profesional no encontrado</h1>
+          <h1 className="text-2xl font-bold text-[#111827]">Profesional no encontrado</h1>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/10 to-background">
+    <div className="min-h-screen bg-[#f9fafb] font-['Poppins',sans-serif]">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
+        <div className="mt-24 mb-8">
+          <h1 className="text-[1.875rem] font-bold text-[#111827] text-center mb-2">
+            Perfil del Profesional
+          </h1>
+        </div>
+
+        <div className="grid md:grid-cols-2 gap-12">
           {/* Professional Info */}
-          <Card>
-            <CardHeader className="bg-gradient-to-br from-primary/10 to-secondary/10">
-              <div className="flex items-center space-x-4">
-                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white text-3xl font-bold">
-                  {professional.profiles?.full_name?.charAt(0) || "P"}
-                </div>
+          <div>
+            <div className="mb-5">
+              <h2 className="text-xl font-semibold text-[#111827]">Información del Profesional</h2>
+            </div>
+            <Card className="bg-white rounded-xl border border-[#e5e7eb] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+              <CardContent className="p-10 space-y-6">
                 <div>
-                  <CardTitle className="text-2xl">
+                  <h3 className="text-2xl font-bold text-[#111827] mb-2">
                     {professional.profiles?.full_name}
-                  </CardTitle>
-                  <CardDescription className="text-primary font-medium text-lg">
+                  </h3>
+                  <p className="text-[#2563eb] font-medium text-lg">
                     {professional.profession}
-                  </CardDescription>
+                  </p>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div>
-                <h3 className="font-semibold text-lg mb-2">Sobre mí</h3>
-                <p className="text-muted-foreground">{professional.bio}</p>
-              </div>
-              <div className="flex items-center text-secondary font-bold text-2xl">
-                <DollarSign className="h-6 w-6 mr-1" />
-                {professional.price_per_hour}/hora
-              </div>
-            </CardContent>
-          </Card>
+                <hr className="border-t border-[#e5e7eb]" />
+                <div>
+                  <h3 className="text-sm font-semibold text-[#6b7280] uppercase tracking-wide mb-2">Sobre mí</h3>
+                  <p className="text-[#4b5563] text-base leading-relaxed">{professional.bio}</p>
+                </div>
+                <hr className="border-t border-[#e5e7eb]" />
+                <div>
+                  <p className="text-sm font-semibold text-[#6b7280] uppercase tracking-wide mb-2">Tarifa por hora</p>
+                  <div className="flex items-center text-[#1f2937] font-bold text-2xl">
+                    <DollarSign className="h-6 w-6 mr-1 text-[#2563eb]" />
+                    {professional.price_per_hour.toLocaleString()}/hora
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Booking Calendar */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5" />
-                Reservar Cita
-              </CardTitle>
-              <CardDescription>
-                Selecciona fecha y horario disponible
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                disabled={(date) => {
-                  const minDate = startOfDay(addDays(new Date(), 1));
-                  return isBefore(date, minDate);
-                }}
-                locale={es}
-                className="rounded-md border"
-              />
+          <div>
+            <div className="mb-5">
+              <h2 className="text-xl font-semibold text-[#111827]">Reservar Cita</h2>
+            </div>
+            <Card className="bg-white rounded-xl border border-[#e5e7eb] shadow-[0_1px_3px_rgba(0,0,0,0.05)]">
+              <CardHeader className="p-6 pb-4">
+                <CardTitle className="flex items-center gap-2 text-lg font-semibold text-[#111827]">
+                  <CalendarIcon className="h-5 w-5 text-[#2563eb]" />
+                  Selecciona fecha y horario disponible
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-6 pt-2 space-y-6">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  disabled={(date) => {
+                    const minDate = startOfDay(addDays(new Date(), 1));
+                    return isBefore(date, minDate);
+                  }}
+                  locale={es}
+                  className="rounded-lg border border-[#e5e7eb] mx-auto"
+                />
 
-              {selectedDate && (
-                <div>
-                  <h4 className="font-semibold mb-3 flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Horarios disponibles para {format(selectedDate, "PPP", { locale: es })}
-                  </h4>
-                  {timeSlots.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No hay horarios disponibles para esta fecha
-                    </p>
-                  ) : (
-                    <div className="grid grid-cols-3 gap-2">
-                      {timeSlots.map((slot) => (
-                        <Button
-                          key={slot}
-                          variant={selectedSlot === slot ? "default" : "outline"}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={
-                            selectedSlot === slot
-                              ? "bg-gradient-to-r from-primary to-primary-glow"
-                              : ""
-                          }
-                        >
-                          {slot}
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                {selectedDate && (
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#6b7280] uppercase tracking-wide mb-3 flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Horarios para {format(selectedDate, "PPP", { locale: es })}
+                    </h4>
+                    {timeSlots.length === 0 ? (
+                      <p className="text-[#6b7280] text-sm">
+                        No hay horarios disponibles para esta fecha
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {timeSlots.map((slot) => (
+                          <button
+                            key={slot}
+                            onClick={() => setSelectedSlot(slot)}
+                            className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                              selectedSlot === slot
+                                ? "bg-[#2563eb] text-white shadow-md"
+                                : "bg-white border border-[#e5e7eb] text-[#374151] hover:border-[#2563eb] hover:text-[#2563eb]"
+                            }`}
+                          >
+                            {slot}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              <Button
-                onClick={handleBooking}
-                disabled={!selectedDate || !selectedSlot}
-                className="w-full bg-gradient-to-r from-secondary to-secondary-light"
-                size="lg"
-              >
-                Continuar con la Reserva
-              </Button>
-            </CardContent>
-          </Card>
+                <button
+                  onClick={handleBooking}
+                  disabled={!selectedDate || !selectedSlot}
+                  className="w-full p-4 bg-[#2563eb] text-white border-none rounded-lg text-[15px] font-semibold cursor-pointer transition-all hover:bg-transparent hover:border hover:border-[#2563eb] hover:text-[#2563eb] hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#2563eb] disabled:hover:text-white disabled:hover:translate-y-0"
+                >
+                  Continuar con la Reserva
+                </button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-[#374151] text-white mt-16">
+        <div className="max-w-[1400px] mx-auto px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <h2 className="text-2xl text-[#2563eb] mb-4 font-bold">Agendia</h2>
+              <p className="text-[#d1d5db] text-sm leading-relaxed">
+                Conectamos profesionales con clientes de manera fácil y segura.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Contacto</h4>
+              <p className="text-[#d1d5db] text-sm mb-2">+57 301 314 0650</p>
+              <p className="text-[#d1d5db] text-sm mb-2">contacto@agendia.com</p>
+              <p className="text-[#d1d5db] text-sm">Santa Marta, Colombia</p>
+            </div>
+            <div>
+              <h4 className="text-lg font-semibold mb-4">Cuestiones Legales</h4>
+              <ul className="space-y-2">
+                <li>
+                  <Link to="/" className="text-[#d1d5db] text-sm hover:text-[#2563eb] transition-colors no-underline">
+                    Términos y Condiciones
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/" className="text-[#d1d5db] text-sm hover:text-[#2563eb] transition-colors no-underline">
+                    Política de Privacidad
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/" className="text-[#d1d5db] text-sm hover:text-[#2563eb] transition-colors no-underline">
+                    Aviso Legal
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="bg-[#1f2937] py-6 text-center">
+          <p className="text-[#9ca3af] text-sm">
+            Copyright © 2025 <strong className="text-[#2563eb]">Agendia - Conectando profesionales</strong>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };

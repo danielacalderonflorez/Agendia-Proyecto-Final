@@ -74,7 +74,6 @@ const MyAppointments = () => {
         return;
       }
 
-      // Get user profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("role")
@@ -83,7 +82,6 @@ const MyAppointments = () => {
 
       setUserRole(profile?.role || null);
 
-      // Load appointments as client
       const { data: clientAppts, error: clientError } = await supabase
         .from("appointments")
         .select(`
@@ -101,7 +99,6 @@ const MyAppointments = () => {
       if (clientError) throw clientError;
       setAppointments(clientAppts || []);
 
-      // If professional, load their appointments
       if (profile?.role === "profesional") {
         const { data: profData } = await supabase
           .from("professionals")
@@ -157,7 +154,6 @@ const MyAppointments = () => {
 
       if (error) throw error;
 
-      // Get appointment details for notification
       const appointment = appointments.find((apt) => apt.id === appointmentId);
       if (appointment) {
         const { data: professional } = await supabase
@@ -207,10 +203,8 @@ const MyAppointments = () => {
 
       if (error) throw error;
 
-      // Get appointment details for notification and Google Calendar
       const appointment = professionalAppointments.find((apt) => apt.id === appointmentId);
       if (appointment) {
-        // Get full appointment data including emails
         const { data: fullAppointment } = await supabase
           .from("appointments")
           .select(`
@@ -222,7 +216,6 @@ const MyAppointments = () => {
           .single();
 
         if (fullAppointment?.client_id) {
-          // Create notification
           await supabase.from("notifications").insert({
             user_id: fullAppointment.client_id,
             type: "cita_aceptada",
@@ -235,7 +228,6 @@ const MyAppointments = () => {
             appointment_id: appointmentId,
           });
 
-          // Create Google Calendar event
           try {
             const calendarResponse = await supabase.functions.invoke(
               'google-calendar-integration',
@@ -254,7 +246,6 @@ const MyAppointments = () => {
 
             if (calendarResponse.error) {
               console.error('Google Calendar error:', calendarResponse.error);
-              // Don't throw, just log - appointment is already accepted
               toast({
                 title: "Cita aceptada",
                 description: "Cita aceptada pero no se pudo crear el evento en Google Calendar",
@@ -267,7 +258,6 @@ const MyAppointments = () => {
             }
           } catch (calendarError) {
             console.error('Failed to create calendar event:', calendarError);
-            // Don't throw - appointment is already accepted
             toast({
               title: "Cita aceptada",
               description: "Cita aceptada correctamente",
@@ -300,7 +290,6 @@ const MyAppointments = () => {
 
       if (error) throw error;
 
-      // Get client ID for notification
       const appointment = professionalAppointments.find((apt) => apt.id === appointmentId);
       if (appointment) {
         const { data: apptData } = await supabase
@@ -364,7 +353,6 @@ const MyAppointments = () => {
 
       if (error) throw error;
 
-      // Get client ID for notification
       const { data: apptData } = await supabase
         .from("appointments")
         .select("client_id")
@@ -396,202 +384,272 @@ const MyAppointments = () => {
     }
   };
 
+  const getFilteredCount = (appointmentsList: Appointment[], status: string) => {
+    if (status === 'todas') return appointmentsList.length;
+    return appointmentsList.filter(a => a.status === status).length;
+  };
+
   const renderAppointmentCard = (appointment: Appointment, isProfessional: boolean = false) => (
-    <Card key={appointment.id} className="hover:shadow-md transition-shadow">
-      <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              {isProfessional
-                ? appointment.profiles?.full_name
-                : appointment.professionals?.profiles?.full_name}
-            </CardTitle>
-            <CardDescription>
-              {!isProfessional && appointment.professionals?.profession}
-            </CardDescription>
-          </div>
-          <Badge className={statusColors[appointment.status]}>
-            {statusLabels[appointment.status]}
-          </Badge>
+    <div
+      key={appointment.id}
+      className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm hover:shadow-lg hover:-translate-y-2 transition-all duration-300 flex flex-col gap-4"
+      style={{ borderColor: appointment.status === 'aceptada' ? '#e5e7eb' : '#e5e7eb' }}
+    >
+      <div className="flex justify-between items-start">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <User className="h-5 w-5" />
+            {isProfessional
+              ? appointment.profiles?.full_name
+              : appointment.professionals?.profiles?.full_name}
+          </h3>
+          {!isProfessional && appointment.professionals?.profession && (
+            <p className="text-sm text-gray-500">{appointment.professionals.profession}</p>
+          )}
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        <Badge className={statusColors[appointment.status]}>
+          {statusLabels[appointment.status]}
+        </Badge>
+      </div>
+
+      <div className="flex flex-col gap-3">
         <div className="flex items-center gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Calendar className="h-4 w-4 text-gray-500" />
             <span>{format(parseISO(appointment.appointment_date), "PPP", { locale: es })}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <Clock className="h-4 w-4 text-gray-500" />
             <span>{appointment.start_time.slice(0, 5)}</span>
           </div>
         </div>
+      </div>
 
-        {appointment.cancellation_reason && (
-          <div className="p-3 bg-muted rounded-md">
-            <p className="text-sm font-medium">Motivo de cancelación:</p>
-            <p className="text-sm text-muted-foreground">{appointment.cancellation_reason}</p>
-          </div>
-        )}
+      {appointment.cancellation_reason && (
+        <div className="p-3 bg-gray-50 rounded-md">
+          <p className="text-sm font-medium">Motivo de cancelación:</p>
+          <p className="text-sm text-gray-600">{appointment.cancellation_reason}</p>
+        </div>
+      )}
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate(`/chat/${appointment.id}`)}
-            className="flex-1"
-          >
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Chat
-          </Button>
+      <div className="flex gap-3 mt-2">
+        <button
+          onClick={() => navigate(`/chat/${appointment.id}`)}
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-transparent hover:border hover:border-blue-600 hover:text-blue-600 transition-all duration-300"
+        >
+          <MessageSquare className="h-4 w-4" />
+          Chat
+        </button>
 
-          {!isProfessional &&
-            appointment.status !== "cancelada" &&
-            appointment.status !== "completada" &&
-            appointment.status !== "rechazada" && (
-              <Dialog
-                open={cancellingId === appointment.id}
-                onOpenChange={(open) => {
-                  if (!open) {
-                    setCancellingId(null);
-                    setCancellationReason("");
-                  }
-                }}
-              >
-                <DialogTrigger asChild>
+        {!isProfessional &&
+          appointment.status !== "cancelada" &&
+          appointment.status !== "completada" &&
+          appointment.status !== "rechazada" && (
+            <Dialog
+              open={cancellingId === appointment.id}
+              onOpenChange={(open) => {
+                if (!open) {
+                  setCancellingId(null);
+                  setCancellationReason("");
+                }
+              }}
+            >
+              <DialogTrigger asChild>
+                <button
+                  onClick={() => setCancellingId(appointment.id)}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 text-white rounded-lg font-semibold text-sm hover:bg-transparent hover:border hover:border-gray-800 hover:text-gray-800 transition-all duration-300"
+                >
+                  <X className="h-4 w-4" />
+                  Cancelar
+                </button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Cancelar Cita</DialogTitle>
+                  <DialogDescription>
+                    Por favor indica el motivo de la cancelación
+                  </DialogDescription>
+                </DialogHeader>
+                <Textarea
+                  placeholder="Motivo de cancelación..."
+                  value={cancellationReason}
+                  onChange={(e) => setCancellationReason(e.target.value)}
+                />
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
-                    size="sm"
-                    onClick={() => setCancellingId(appointment.id)}
-                    className="text-destructive"
+                    onClick={() => {
+                      setCancellingId(null);
+                      setCancellationReason("");
+                    }}
+                    className="flex-1"
                   >
-                    <X className="h-4 w-4 mr-2" />
-                    Cancelar
+                    Volver
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Cancelar Cita</DialogTitle>
-                    <DialogDescription>
-                      Por favor indica el motivo de la cancelación
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Textarea
-                    placeholder="Motivo de cancelación..."
-                    value={cancellationReason}
-                    onChange={(e) => setCancellationReason(e.target.value)}
-                  />
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setCancellingId(null);
-                        setCancellationReason("");
-                      }}
-                      className="flex-1"
-                    >
-                      Volver
-                    </Button>
-                    <Button
-                      onClick={() => handleCancelAppointment(appointment.id)}
-                      className="flex-1 bg-destructive hover:bg-destructive/90"
-                    >
-                      Confirmar Cancelación
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-
-          {isProfessional && appointment.status === "pendiente_aceptacion" && (
-            <>
-              <Button
-                size="sm"
-                onClick={() => handleAcceptAppointment(appointment.id)}
-                className="bg-green-500 hover:bg-green-600"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Aceptar
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleRejectAppointment(appointment.id)}
-                className="text-destructive"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Rechazar
-              </Button>
-            </>
+                  <Button
+                    onClick={() => handleCancelAppointment(appointment.id)}
+                    className="flex-1 bg-red-600 hover:bg-red-700"
+                  >
+                    Confirmar Cancelación
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
           )}
 
-          {isProfessional && appointment.status === "aceptada" && (
-            <Button
-              size="sm"
-              onClick={() => handleCompleteAppointment(appointment.id)}
-              className="bg-gray-500 hover:bg-gray-600"
+        {isProfessional && appointment.status === "pendiente_aceptacion" && (
+          <>
+            <button
+              onClick={() => handleAcceptAppointment(appointment.id)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-green-500 text-white rounded-lg font-semibold text-sm hover:bg-transparent hover:border hover:border-green-500 hover:text-green-500 transition-all duration-300"
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Marcar Completada
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+              <CheckCircle className="h-4 w-4" />
+              Aceptar
+            </button>
+            <button
+              onClick={() => handleRejectAppointment(appointment.id)}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-800 text-white rounded-lg font-semibold text-sm hover:bg-transparent hover:border hover:border-gray-800 hover:text-gray-800 transition-all duration-300"
+            >
+              <XCircle className="h-4 w-4" />
+              Rechazar
+            </button>
+          </>
+        )}
+
+        {isProfessional && appointment.status === "aceptada" && (
+          <button
+            onClick={() => handleCompleteAppointment(appointment.id)}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-500 text-white rounded-lg font-semibold text-sm hover:bg-transparent hover:border hover:border-gray-500 hover:text-gray-500 transition-all duration-300"
+          >
+            <CheckCircle className="h-4 w-4" />
+            Marcar Completada
+          </button>
+        )}
+      </div>
+    </div>
   );
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="container mx-auto px-4 py-12 text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/10 to-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Mis Citas</h1>
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
+        <h1 className="text-[1.875rem] font-bold mb-8 text-gray-900 mt-24">Mis Citas</h1>
 
         {/* Client Appointments */}
-        <div className="mb-12">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-semibold">Como Cliente</h2>
-            <select
-              value={filterClient}
-              onChange={(e) => setFilterClient(e.target.value)}
-              className="px-4 py-2 border rounded-md bg-background text-foreground"
-            >
-              <option value="todas">Todas</option>
-              <option value="pendiente_aceptacion">Por Confirmar</option>
-              <option value="aceptada">Confirmadas</option>
-              <option value="completada">Completadas</option>
-              <option value="cancelada">Canceladas</option>
-              <option value="rechazada">Rechazadas</option>
-            </select>
+        <div className="mb-16">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-3xl font-bold text-gray-900">Como Cliente</h2>
           </div>
+
+          <div className="flex gap-4 border-b-2 border-gray-200 mb-8 flex-wrap">
+            <button
+              onClick={() => setFilterClient('todas')}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                filterClient === 'todas'
+                  ? 'text-blue-600 border-b-4 border-blue-600'
+                  : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+              }`}
+            >
+              Todas
+              <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                {getFilteredCount(appointments, 'todas')}
+              </span>
+            </button>
+            <button
+              onClick={() => setFilterClient('pendiente_aceptacion')}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                filterClient === 'pendiente_aceptacion'
+                  ? 'text-blue-600 border-b-4 border-blue-600'
+                  : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+              }`}
+            >
+              Por Confirmar
+              <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                {getFilteredCount(appointments, 'pendiente_aceptacion')}
+              </span>
+            </button>
+            <button
+              onClick={() => setFilterClient('aceptada')}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                filterClient === 'aceptada'
+                  ? 'text-blue-600 border-b-4 border-blue-600'
+                  : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+              }`}
+            >
+              Confirmadas
+              <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                {getFilteredCount(appointments, 'aceptada')}
+              </span>
+            </button>
+            <button
+              onClick={() => setFilterClient('completada')}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                filterClient === 'completada'
+                  ? 'text-blue-600 border-b-4 border-blue-600'
+                  : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+              }`}
+            >
+              Completadas
+              <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                {getFilteredCount(appointments, 'completada')}
+              </span>
+            </button>
+            <button
+              onClick={() => setFilterClient('cancelada')}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                filterClient === 'cancelada'
+                  ? 'text-blue-600 border-b-4 border-blue-600'
+                  : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+              }`}
+            >
+              Canceladas
+              <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                {getFilteredCount(appointments, 'cancelada')}
+              </span>
+            </button>
+            <button
+              onClick={() => setFilterClient('rechazada')}
+              className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                filterClient === 'rechazada'
+                  ? 'text-blue-600 border-b-4 border-blue-600'
+                  : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+              }`}
+            >
+              Rechazadas
+              <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                {getFilteredCount(appointments, 'rechazada')}
+              </span>
+            </button>
+          </div>
+
           {appointments.filter(a => filterClient === 'todas' || a.status === filterClient).length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <p className="text-muted-foreground">
+                <p className="text-gray-500">
                   {appointments.length === 0 
                     ? "No tienes citas como cliente" 
                     : "No hay citas con este filtro"}
                 </p>
                 {appointments.length === 0 && (
-                  <Button asChild className="mt-4">
+                  <Button asChild className="mt-4 bg-blue-600 hover:bg-blue-700">
                     <a href="/profesionales">Buscar Profesionales</a>
                   </Button>
                 )}
               </CardContent>
             </Card>
           ) : (
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {appointments
                 .filter(a => filterClient === 'todas' || a.status === filterClient)
                 .map((apt) => renderAppointmentCard(apt, false))}
@@ -602,25 +660,95 @@ const MyAppointments = () => {
         {/* Professional Appointments */}
         {userRole === "profesional" && (
           <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold">Como Profesional</h2>
-              <select
-                value={filterProfessional}
-                onChange={(e) => setFilterProfessional(e.target.value)}
-                className="px-4 py-2 border rounded-md bg-background text-foreground"
-              >
-                <option value="todas">Todas</option>
-                <option value="pendiente_aceptacion">Por Confirmar</option>
-                <option value="aceptada">Confirmadas</option>
-                <option value="completada">Completadas</option>
-                <option value="cancelada">Canceladas</option>
-                <option value="rechazada">Rechazadas</option>
-              </select>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-3xl font-bold text-gray-900">Como Profesional</h2>
             </div>
+
+            <div className="flex gap-4 border-b-2 border-gray-200 mb-8 flex-wrap">
+              <button
+                onClick={() => setFilterProfessional('todas')}
+                className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                  filterProfessional === 'todas'
+                    ? 'text-blue-600 border-b-4 border-blue-600'
+                    : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+                }`}
+              >
+                Todas
+                <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                  {getFilteredCount(professionalAppointments, 'todas')}
+                </span>
+              </button>
+              <button
+                onClick={() => setFilterProfessional('pendiente_aceptacion')}
+                className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                  filterProfessional === 'pendiente_aceptacion'
+                    ? 'text-blue-600 border-b-4 border-blue-600'
+                    : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+                }`}
+              >
+                Por Confirmar
+                <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                  {getFilteredCount(professionalAppointments, 'pendiente_aceptacion')}
+                </span>
+              </button>
+              <button
+                onClick={() => setFilterProfessional('aceptada')}
+                className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                  filterProfessional === 'aceptada'
+                    ? 'text-blue-600 border-b-4 border-blue-600'
+                    : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+                }`}
+              >
+                Confirmadas
+                <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                  {getFilteredCount(professionalAppointments, 'aceptada')}
+                </span>
+              </button>
+              <button
+                onClick={() => setFilterProfessional('completada')}
+                className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                  filterProfessional === 'completada'
+                    ? 'text-blue-600 border-b-4 border-blue-600'
+                    : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+                }`}
+              >
+                Completadas
+                <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                  {getFilteredCount(professionalAppointments, 'completada')}
+                </span>
+              </button>
+              <button
+                onClick={() => setFilterProfessional('cancelada')}
+                className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                  filterProfessional === 'cancelada'
+                    ? 'text-blue-600 border-b-4 border-blue-600'
+                    : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+                }`}
+              >
+                Canceladas
+                <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                  {getFilteredCount(professionalAppointments, 'cancelada')}
+                </span>
+              </button>
+              <button
+                onClick={() => setFilterProfessional('rechazada')}
+                className={`flex items-center gap-2 px-6 py-4 font-semibold text-base transition-all duration-300 -mb-0.5 ${
+                  filterProfessional === 'rechazada'
+                    ? 'text-blue-600 border-b-4 border-blue-600'
+                    : 'text-gray-500 border-b-4 border-transparent hover:text-blue-600'
+                }`}
+              >
+                Rechazadas
+                <span className="inline-flex items-center justify-center bg-blue-600 text-white rounded-full w-6 h-6 text-xs font-bold">
+                  {getFilteredCount(professionalAppointments, 'rechazada')}
+                </span>
+              </button>
+            </div>
+
             {professionalAppointments.filter(a => filterProfessional === 'todas' || a.status === filterProfessional).length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">
+                  <p className="text-gray-500">
                     {professionalAppointments.length === 0 
                       ? "No tienes citas como profesional" 
                       : "No hay citas con este filtro"}
@@ -628,7 +756,7 @@ const MyAppointments = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {professionalAppointments
                   .filter(a => filterProfessional === 'todas' || a.status === filterProfessional)
                   .map((apt) => renderAppointmentCard(apt, true))}

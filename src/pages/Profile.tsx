@@ -1,621 +1,662 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import { User, Briefcase, DollarSign, Calendar as CalendarIcon } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { es } from "date-fns/locale";
+"use client"
+
+import { useEffect, useState } from "react"
+import { supabase } from "@/integrations/supabase/client"
+import { useNavigate } from "react-router-dom"
+import Navbar from "@/components/Navbar"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
+import { User, Briefcase, DollarSign, CalendarIcon } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface Profile {
-  id: string;
-  full_name: string;
-  email: string;
-  role: string;
+  id: string
+  full_name: string
+  email: string
+  role: string
 }
 
 interface Professional {
-  id: string;
-  profession: string;
-  bio: string;
-  price_per_hour: number;
+  id: string
+  profession: string
+  bio: string
+  price_per_hour: number
 }
 
 interface Availability {
-  id: string;
-  day_of_week: string;
-  start_time: string;
-  end_time: string;
-  slot_duration_minutes: number;
+  id: string
+  day_of_week: string
+  start_time: string
+  end_time: string
+  slot_duration_minutes: number
 }
 
-const daysOfWeek = [
-  "lunes",
-  "martes",
-  "miercoles",
-  "jueves",
-  "viernes",
-  "sabado",
-  "domingo",
-];
+const daysOfWeek = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"]
 
 const Profile = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [professional, setProfessional] = useState<Professional | null>(null);
-  const [availabilities, setAvailabilities] = useState<Availability[]>([]);
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [editingProfessional, setEditingProfessional] = useState(false);
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [professional, setProfessional] = useState<Professional | null>(null)
+  const [availabilities, setAvailabilities] = useState<Availability[]>([])
+  const [editingProfile, setEditingProfile] = useState(false)
+  const [editingProfessional, setEditingProfessional] = useState(false)
 
   const [newAvailability, setNewAvailability] = useState({
     day_of_week: "lunes",
     start_time: "09:00",
     end_time: "18:00",
     slot_duration_minutes: 60,
-  });
+  })
 
   useEffect(() => {
-    loadProfileData();
-  }, []);
+    loadProfileData()
+  }, [])
 
   const loadProfileData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
       if (!user) {
-        navigate("/login");
-        return;
+        navigate("/login")
+        return
       }
 
-      // Load profile
       const { data: profileData, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
-        .single();
+        .single()
 
-      if (profileError) throw profileError;
-      setProfile(profileData);
+      if (profileError) throw profileError
+      setProfile(profileData)
 
-      // If professional, load professional data
       if (profileData.role === "profesional") {
-        const { data: profData } = await supabase
+        const { data: profData, error: profError } = await supabase
           .from("professionals")
           .select("*")
           .eq("user_id", user.id)
-          .single();
+          .maybeSingle()
 
-        setProfessional(profData);
+        if (profError && profError.code !== "PGRST116") {
+          console.error("[v0] Error loading professional data:", profError)
+        }
 
-        if (profData) {
-          // Load availabilities
-          const { data: availData } = await supabase
-            .from("availabilities")
-            .select("*")
-            .eq("professional_id", profData.id)
-            .eq("is_active", true)
-            .order("day_of_week");
+        if (!profData) {
+          console.log("[v0] No professional record found, user needs to complete profile first")
+          setProfessional(null)
+        } else {
+          setProfessional(profData)
 
-          setAvailabilities(availData || []);
+          if (profData) {
+            const { data: availData } = await supabase
+              .from("availabilities")
+              .select("*")
+              .eq("professional_id", profData.id)
+              .eq("is_active", true)
+              .order("day_of_week")
+
+            setAvailabilities(availData || [])
+          }
         }
       }
     } catch (error: any) {
+      console.error("[v0] Error loading profile data:", error)
       toast({
         variant: "destructive",
         title: "Error",
         description: "No se pudo cargar el perfil",
-      });
+      })
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleSaveProfile = async () => {
-    if (!profile) return;
-    setSaving(true);
+    if (!profile) return
+    setSaving(true)
 
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ full_name: profile.full_name })
-        .eq("id", profile.id);
+      const { error } = await supabase.from("profiles").update({ full_name: profile.full_name }).eq("id", profile.id)
 
-      if (error) throw error;
+      if (error) throw error
 
       toast({
         title: "Perfil actualizado",
         description: "Tu información ha sido guardada",
-      });
-      setEditingProfile(false);
+      })
+      setEditingProfile(false)
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "No se pudo actualizar el perfil",
-      });
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleSaveProfessional = async () => {
-    if (!professional || !profile) return;
-    setSaving(true);
+    if (!profile) return
+    setSaving(true)
 
     try {
-      // Validate professional data
-      if (!professional.profession || professional.profession === "Por definir" || professional.profession.trim() === "") {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "No se pudo obtener la sesión del usuario",
+        })
+        setSaving(false)
+        return
+      }
+
+      if (
+        !professional?.profession ||
+        professional.profession === "Por definir" ||
+        professional.profession.trim() === ""
+      ) {
         toast({
           variant: "destructive",
           title: "Error",
           description: "Por favor ingresa tu profesión",
-        });
-        setSaving(false);
-        return;
+        })
+        setSaving(false)
+        return
       }
 
-      if (!professional.price_per_hour || professional.price_per_hour <= 0) {
+      if (!professional?.price_per_hour || professional.price_per_hour <= 0) {
         toast({
           variant: "destructive",
           title: "Error",
           description: "Por favor ingresa un precio por hora válido",
-        });
-        setSaving(false);
-        return;
+        })
+        setSaving(false)
+        return
       }
 
-      if (professional.id) {
-        const { error } = await supabase
+      if (!professional?.id) {
+        console.log("[v0] Creating new professional record for user:", user.id)
+
+        const { data, error } = await supabase
+          .from("professionals")
+          .insert({
+            user_id: user.id,
+            profession: professional.profession,
+            bio: professional.bio || "Completa tu perfil para empezar a recibir citas",
+            price_per_hour: professional.price_per_hour,
+            is_active: true,
+          })
+          .select()
+          .single()
+
+        if (error) {
+          console.error("[v0] Insert error:", error)
+          throw error
+        }
+
+        console.log("[v0] Professional record created:", data)
+        setProfessional(data)
+
+        toast({
+          title: "Perfil profesional creado",
+          description: "Tu perfil ha sido activado y ahora estás visible para los clientes",
+        })
+      } else {
+        console.log("[v0] Updating existing professional record:", professional.id)
+
+        const { data, error } = await supabase
           .from("professionals")
           .update({
             profession: professional.profession,
             bio: professional.bio,
             price_per_hour: professional.price_per_hour,
-            is_active: true, // Activate profile when completed
+            is_active: true,
           })
-          .eq("id", professional.id);
+          .eq("id", professional.id)
+          .select()
 
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from("professionals").insert({
-          user_id: profile.id,
-          profession: professional.profession,
-          bio: professional.bio,
-          price_per_hour: professional.price_per_hour,
-          is_active: true,
-        });
+        if (error) {
+          console.error("[v0] Update error:", error)
+          throw error
+        }
 
-        if (error) throw error;
+        console.log("[v0] Professional record updated:", data)
+
+        toast({
+          title: "Datos profesionales actualizados",
+          description: "Tu perfil ha sido actualizado correctamente",
+        })
       }
 
-      toast({
-        title: "Datos profesionales actualizados",
-        description: "Tu perfil ha sido activado y ahora estás visible para los clientes",
-      });
-      setEditingProfessional(false);
-      loadProfileData();
+      setEditingProfessional(false)
+      loadProfileData()
     } catch (error: any) {
+      console.error("[v0] Save professional error:", error)
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudieron actualizar los datos profesionales",
-      });
+        description: `No se pudieron guardar los datos profesionales: ${error.message}`,
+      })
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
-  };
+  }
 
   const handleAddAvailability = async () => {
-    if (!professional) return;
+    if (!professional) return
 
     try {
-      const { error } = await supabase.from("availabilities").insert([{
-        professional_id: professional.id,
-        day_of_week: newAvailability.day_of_week as any,
-        start_time: `${newAvailability.start_time}:00`,
-        end_time: `${newAvailability.end_time}:00`,
-        slot_duration_minutes: newAvailability.slot_duration_minutes,
-      }]);
+      const { error } = await supabase.from("availabilities").insert([
+        {
+          professional_id: professional.id,
+          day_of_week: newAvailability.day_of_week as any,
+          start_time: `${newAvailability.start_time}:00`,
+          end_time: `${newAvailability.end_time}:00`,
+          slot_duration_minutes: newAvailability.slot_duration_minutes,
+        },
+      ])
 
-      if (error) throw error;
+      if (error) throw error
 
       toast({
         title: "Disponibilidad agregada",
         description: "Tu horario ha sido actualizado",
-      });
+      })
 
-      loadProfileData();
+      loadProfileData()
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "No se pudo agregar la disponibilidad",
-      });
+      })
     }
-  };
+  }
 
   const handleDeleteAvailability = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from("availabilities")
-        .update({ is_active: false })
-        .eq("id", id);
+      const { error } = await supabase.from("availabilities").update({ is_active: false }).eq("id", id)
 
-      if (error) throw error;
+      if (error) throw error
 
       toast({
         title: "Disponibilidad eliminada",
         description: "El horario ha sido removido",
-      });
+      })
 
-      setAvailabilities((current) => current.filter((a) => a.id !== id));
+      setAvailabilities((current) => current.filter((a) => a.id !== id))
     } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error",
         description: "No se pudo eliminar la disponibilidad",
-      });
+      })
     }
-  };
+  }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="container mx-auto px-4 py-12 text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/10 to-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-8">Mi Perfil</h1>
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
+        <h1 className="text-[1.875rem] font-bold mb-8 text-gray-900 mt-24">Mi Perfil</h1>
 
         {/* Basic Profile */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+        <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-6">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
               <User className="h-5 w-5" />
               Información Personal
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+            </h2>
+          </div>
+          <div className="p-6 space-y-4">
             <div className="space-y-2">
-              <Label>Nombre Completo</Label>
+              <label className="text-sm font-medium text-gray-700">Nombre Completo</label>
               {editingProfile ? (
                 <Input
                   value={profile?.full_name || ""}
-                  onChange={(e) =>
-                    setProfile((p) => (p ? { ...p, full_name: e.target.value } : null))
-                  }
+                  onChange={(e) => setProfile((p) => (p ? { ...p, full_name: e.target.value } : null))}
+                  className="border-gray-200"
                 />
               ) : (
-                <p className="text-lg">{profile?.full_name}</p>
+                <p className="text-base text-gray-900">{profile?.full_name}</p>
               )}
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
-              <p className="text-lg">{profile?.email}</p>
+              <label className="text-sm font-medium text-gray-700">Email</label>
+              <p className="text-base text-gray-900">{profile?.email}</p>
             </div>
             <div className="space-y-2">
-              <Label>Rol</Label>
-              <p className="text-lg capitalize">{profile?.role}</p>
+              <label className="text-sm font-medium text-gray-700">Rol</label>
+              <p className="text-base text-gray-900 capitalize">{profile?.role}</p>
             </div>
             {editingProfile ? (
               <div className="flex gap-2">
-                <Button onClick={handleSaveProfile} disabled={saving}>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition-all duration-300"
+                >
                   Guardar
-                </Button>
-                <Button
-                  variant="outline"
+                </button>
+                <button
                   onClick={() => {
-                    setEditingProfile(false);
-                    loadProfileData();
+                    setEditingProfile(false)
+                    loadProfileData()
                   }}
+                  className="px-4 py-2.5 bg-white text-gray-800 border border-gray-300 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all duration-300"
                 >
                   Cancelar
-                </Button>
+                </button>
               </div>
             ) : (
-              <Button onClick={() => setEditingProfile(true)}>Editar Perfil</Button>
+              <button
+                onClick={() => setEditingProfile(true)}
+                className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition-all duration-300"
+              >
+                Editar Perfil
+              </button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Professional Info */}
         {profile?.role === "profesional" && (
           <>
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-6">
+              <div className="p-6 border-b border-gray-100">
+                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <Briefcase className="h-5 w-5" />
                   Información Profesional
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                </h2>
+              </div>
+              <div className="p-6 space-y-4">
                 {!professional ? (
                   <div className="text-center py-6 space-y-4">
-                    <p className="text-muted-foreground">
-                      Aún no has configurado tu perfil profesional
-                    </p>
-                    <Button 
+                    <p className="text-[#6b7280]">Aún no has configurado tu perfil profesional</p>
+                    <button
                       onClick={() => {
                         setProfessional({
                           id: "",
                           profession: "",
                           bio: "",
                           price_per_hour: 0,
-                        });
-                        setEditingProfessional(true);
+                        })
+                        setEditingProfessional(true)
                       }}
+                      className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition-all duration-300"
                     >
                       Crear Perfil Profesional
-                    </Button>
+                    </button>
                   </div>
                 ) : (
                   <>
                     <div className="space-y-2">
-                      <Label>Profesión</Label>
+                      <label className="text-sm font-medium text-gray-700">Profesión</label>
                       {editingProfessional ? (
                         <Input
                           value={professional?.profession || ""}
-                          onChange={(e) =>
-                            setProfessional((p) =>
-                              p ? { ...p, profession: e.target.value } : null
-                            )
-                          }
+                          onChange={(e) => setProfessional((p) => (p ? { ...p, profession: e.target.value } : null))}
                           placeholder="Ej: Psicólogo, Abogado, Ingeniero"
+                          className="border-gray-200"
                         />
                       ) : (
-                        <p className="text-lg">{professional?.profession || "No especificado"}</p>
+                        <p className="text-base text-gray-900">{professional?.profession || "No especificado"}</p>
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label>Biografía</Label>
+                      <label className="text-sm font-medium text-gray-700">Biografía</label>
                       {editingProfessional ? (
                         <Textarea
                           value={professional?.bio || ""}
-                          onChange={(e) =>
-                            setProfessional((p) => (p ? { ...p, bio: e.target.value } : null))
-                          }
+                          onChange={(e) => setProfessional((p) => (p ? { ...p, bio: e.target.value } : null))}
                           placeholder="Cuéntanos sobre tu experiencia..."
                           rows={4}
+                          className="border-gray-200"
                         />
                       ) : (
-                        <p className="text-muted-foreground">
-                          {professional?.bio || "No especificado"}
-                        </p>
+                        <p className="text-[#6b7280] text-sm">{professional?.bio || "No especificado"}</p>
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
+                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
                         <DollarSign className="h-4 w-4" />
                         Precio por Hora
-                      </Label>
+                      </label>
                       {editingProfessional ? (
                         <Input
                           type="number"
                           value={professional?.price_per_hour || ""}
                           onChange={(e) =>
                             setProfessional((p) =>
-                              p ? { ...p, price_per_hour: parseFloat(e.target.value) } : null
+                              p ? { ...p, price_per_hour: Number.parseFloat(e.target.value) } : null,
                             )
                           }
+                          className="border-gray-200"
                         />
                       ) : (
-                        <p className="text-lg font-semibold text-secondary">
-                          ${professional?.price_per_hour || 0}
-                        </p>
+                        <p className="text-base font-bold text-blue-600">${professional?.price_per_hour || 0}</p>
                       )}
                     </div>
                     {editingProfessional ? (
                       <div className="flex gap-2">
-                        <Button onClick={handleSaveProfessional} disabled={saving}>
+                        <button
+                          onClick={handleSaveProfessional}
+                          disabled={saving}
+                          className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition-all duration-300"
+                        >
                           Guardar
-                        </Button>
-                        <Button
-                          variant="outline"
+                        </button>
+                        <button
                           onClick={() => {
-                            setEditingProfessional(false);
-                            loadProfileData();
+                            setEditingProfessional(false)
+                            loadProfileData()
                           }}
+                          className="px-4 py-2.5 bg-white text-gray-800 border border-gray-300 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all duration-300"
                         >
                           Cancelar
-                        </Button>
+                        </button>
                       </div>
                     ) : (
-                      <Button onClick={() => setEditingProfessional(true)}>
+                      <button
+                        onClick={() => setEditingProfessional(true)}
+                        className="px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition-all duration-300"
+                      >
                         Editar Información Profesional
-                      </Button>
+                      </button>
                     )}
                   </>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
-            {/* Quick Access - Only show if professional profile exists and is active */}
+            {/* Quick Access */}
             {professional && professional.id && (
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Accesos Rápidos</CardTitle>
-                  <CardDescription>Gestiona tus citas y revisa tu rendimiento</CardDescription>
-                </CardHeader>
-                <CardContent>
+              <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-6">
+                <div className="p-6 border-b border-gray-100">
+                  <h2 className="text-lg font-semibold text-gray-900">Accesos Rápidos</h2>
+                  <p className="text-sm text-[#6b7280] mt-1">Gestiona tus citas y revisa tu rendimiento</p>
+                </div>
+                <div className="p-6">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <Button 
-                      onClick={() => navigate('/calendario')}
-                      className="h-24 flex flex-col gap-2"
-                      variant="outline"
+                    <button
+                      onClick={() => navigate("/calendario")}
+                      className="h-24 flex flex-col items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all duration-300"
                     >
-                      <CalendarIcon className="h-8 w-8" />
-                      <span className="font-semibold">Mi Calendario</span>
-                      <span className="text-xs text-muted-foreground">Vista de citas programadas</span>
-                    </Button>
-                    <Button 
-                      onClick={() => navigate('/estadisticas')}
-                      className="h-24 flex flex-col gap-2"
-                      variant="outline"
+                      <CalendarIcon className="h-8 w-8 text-blue-600" />
+                      <span className="font-semibold text-gray-900">Mi Calendario</span>
+                      <span className="text-xs text-[#6b7280]">Vista de citas programadas</span>
+                    </button>
+                    <button
+                      onClick={() => navigate("/estadisticas")}
+                      className="h-24 flex flex-col items-center justify-center gap-2 bg-white border border-gray-300 rounded-lg hover:border-blue-600 hover:bg-blue-50 transition-all duration-300"
                     >
-                      <Briefcase className="h-8 w-8" />
-                      <span className="font-semibold">Estadísticas</span>
-                      <span className="text-xs text-muted-foreground">Analiza tu rendimiento</span>
-                    </Button>
+                      <Briefcase className="h-8 w-8 text-blue-600" />
+                      <span className="font-semibold text-gray-900">Estadísticas</span>
+                      <span className="text-xs text-[#6b7280]">Analiza tu rendimiento</span>
+                    </button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
 
-            {/* Availability Management - Only show if professional profile exists */}
+            {/* Availability Management */}
             {professional && professional.id && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] mb-6">
+                <div className="p-6 border-b border-gray-100">
+                  <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                     <CalendarIcon className="h-5 w-5" />
                     Gestión de Disponibilidad
-                  </CardTitle>
-                  <CardDescription>
+                  </h2>
+                  <p className="text-sm text-[#6b7280] mt-1">
                     Configura los horarios en los que puedes atender clientes
-                  </CardDescription>
-                </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <h3 className="font-semibold">Horarios Actuales</h3>
-                  {availabilities.length === 0 ? (
-                    <p className="text-muted-foreground">
-                      No has configurado disponibilidad aún
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {availabilities.map((avail) => (
-                        <div
-                          key={avail.id}
-                          className="flex items-center justify-between p-3 border rounded-lg"
-                        >
-                          <div>
-                            <p className="font-medium capitalize">{avail.day_of_week}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {avail.start_time.slice(0, 5)} - {avail.end_time.slice(0, 5)} (
-                              {avail.slot_duration_minutes} min por cita)
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteAvailability(avail.id)}
-                            className="text-destructive"
+                  </p>
+                </div>
+                <div className="p-6 space-y-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-gray-900">Horarios Actuales</h3>
+                    {availabilities.length === 0 ? (
+                      <p className="text-[#6b7280]">No has configurado disponibilidad aún</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {availabilities.map((avail) => (
+                          <div
+                            key={avail.id}
+                            className="flex items-center justify-between p-3 border border-gray-200 rounded-lg"
                           >
-                            Eliminar
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="border-t pt-6">
-                  <h3 className="font-semibold mb-4">Agregar Nueva Disponibilidad</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Día</Label>
-                      <Select
-                        value={newAvailability.day_of_week}
-                        onValueChange={(value) =>
-                          setNewAvailability({ ...newAvailability, day_of_week: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {daysOfWeek.map((day) => (
-                            <SelectItem key={day} value={day}>
-                              {day.charAt(0).toUpperCase() + day.slice(1)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Duración por cita (minutos)</Label>
-                      <Input
-                        type="number"
-                        value={newAvailability.slot_duration_minutes}
-                        onChange={(e) =>
-                          setNewAvailability({
-                            ...newAvailability,
-                            slot_duration_minutes: parseInt(e.target.value),
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Hora Inicio</Label>
-                      <Input
-                        type="time"
-                        value={newAvailability.start_time}
-                        onChange={(e) =>
-                          setNewAvailability({
-                            ...newAvailability,
-                            start_time: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Hora Fin</Label>
-                      <Input
-                        type="time"
-                        value={newAvailability.end_time}
-                        onChange={(e) =>
-                          setNewAvailability({
-                            ...newAvailability,
-                            end_time: e.target.value,
-                          })
-                        }
-                      />
-                    </div>
+                            <div>
+                              <p className="font-medium text-gray-900 capitalize">{avail.day_of_week}</p>
+                              <p className="text-sm text-[#6b7280]">
+                                {avail.start_time.slice(0, 5)} - {avail.end_time.slice(0, 5)} (
+                                {avail.slot_duration_minutes} min por cita)
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleDeleteAvailability(avail.id)}
+                              className="px-3 py-1.5 text-red-600 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-50 transition-all duration-300"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <Button onClick={handleAddAvailability} className="mt-4 w-full">
-                    Agregar Disponibilidad
-                  </Button>
+
+                  <div className="border-t border-gray-200 pt-6">
+                    <h3 className="font-semibold text-gray-900 mb-4">Agregar Nueva Disponibilidad</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Día</label>
+                        <Select
+                          value={newAvailability.day_of_week}
+                          onValueChange={(value) => setNewAvailability({ ...newAvailability, day_of_week: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {daysOfWeek.map((day) => (
+                              <SelectItem key={day} value={day}>
+                                {day.charAt(0).toUpperCase() + day.slice(1)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Duración por cita (minutos)</label>
+                        <Input
+                          type="number"
+                          value={newAvailability.slot_duration_minutes}
+                          onChange={(e) =>
+                            setNewAvailability({
+                              ...newAvailability,
+                              slot_duration_minutes: Number.parseInt(e.target.value),
+                            })
+                          }
+                          className="border-gray-200"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Hora Inicio</label>
+                        <Input
+                          type="time"
+                          value={newAvailability.start_time}
+                          onChange={(e) =>
+                            setNewAvailability({
+                              ...newAvailability,
+                              start_time: e.target.value,
+                            })
+                          }
+                          className="border-gray-200"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-700">Hora Fin</label>
+                        <Input
+                          type="time"
+                          value={newAvailability.end_time}
+                          onChange={(e) =>
+                            setNewAvailability({
+                              ...newAvailability,
+                              end_time: e.target.value,
+                            })
+                          }
+                          className="border-gray-200"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleAddAvailability}
+                      className="mt-4 w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition-all duration-300"
+                    >
+                      Agregar Disponibilidad
+                    </button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
             )}
           </>
         )}
 
         <div className="mt-6 flex gap-2">
-          <Button
-            variant="outline"
+          <button
             onClick={() => navigate("/mis-citas")}
-            className="flex-1"
+            className="flex-1 px-4 py-2.5 bg-white text-gray-800 border border-gray-300 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all duration-300"
           >
             Ver Mis Citas
-          </Button>
-          <Button
-            variant="outline"
+          </button>
+          <button
             onClick={() => navigate("/notificaciones")}
-            className="flex-1"
+            className="flex-1 px-4 py-2.5 bg-white text-gray-800 border border-gray-300 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all duration-300"
           >
             Ver Notificaciones
-          </Button>
+          </button>
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default Profile;
+export default Profile

@@ -38,7 +38,6 @@ const Notifications = () => {
   useEffect(() => {
     loadNotifications();
 
-    // Subscribe to realtime updates
     const channel = supabase
       .channel("notifications-changes")
       .on(
@@ -150,10 +149,10 @@ const Notifications = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="container mx-auto px-4 py-12 text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
         </div>
       </div>
     );
@@ -162,78 +161,77 @@ const Notifications = () => {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary-light/10 to-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="flex justify-between items-center mb-8">
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
+        <div className="flex justify-between items-center mb-8 mt-24">
           <div>
-            <h1 className="text-3xl font-bold flex items-center gap-3">
+            <h1 className="text-[1.875rem] font-bold text-gray-900 flex items-center gap-3">
               <Bell className="h-8 w-8" />
               Notificaciones
             </h1>
             {unreadCount > 0 && (
-              <p className="text-muted-foreground mt-1">
+              <p className="text-[#6b7280] mt-2 text-base">
                 Tienes {unreadCount} notificación{unreadCount !== 1 ? "es" : ""} sin leer
               </p>
             )}
           </div>
           {unreadCount > 0 && (
-            <Button onClick={markAllAsRead} variant="outline" size="sm">
-              <CheckCheck className="h-4 w-4 mr-2" />
+            <button
+              onClick={markAllAsRead}
+              className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-[#1d4ed8] hover:-translate-y-0.5 hover:shadow-[0_5px_15px_rgba(37,99,235,0.3)] transition-all duration-300"
+            >
+              <CheckCheck className="h-4 w-4" />
               Marcar todas como leídas
-            </Button>
+            </button>
           )}
         </div>
 
         {notifications.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Bell className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <p className="text-lg text-muted-foreground">No tienes notificaciones</p>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl p-12 text-center border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <Bell className="h-16 w-16 mx-auto text-[#6b7280] mb-4" />
+            <p className="text-lg text-[#6b7280]">No tienes notificaciones</p>
+          </div>
         ) : (
           <div className="space-y-4">
             {notifications.map((notification) => (
-              <Card
+              <div
                 key={notification.id}
-                className={`cursor-pointer hover:shadow-md transition-all ${
-                  !notification.is_read ? "border-l-4 border-l-primary bg-primary/5" : ""
-                }`}
                 onClick={() => handleNotificationClick(notification)}
+                className={`bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_20px_rgba(37,99,235,0.15)] hover:-translate-y-1 transition-all duration-300 cursor-pointer ${
+                  !notification.is_read ? "border-l-4 border-l-blue-600 bg-blue-50" : ""
+                }`}
               >
-                <CardHeader>
-                  <div className="flex justify-between items-start">
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
-                      <CardTitle className="text-lg mb-1">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
                         {notification.title}
-                      </CardTitle>
-                      <p className="text-sm text-muted-foreground">
+                      </h3>
+                      <p className="text-sm text-[#6b7280] leading-relaxed">
                         {notification.message}
                       </p>
                     </div>
                     <Badge
-                      className={notificationTypeColors[notification.type] || "bg-gray-500"}
+                      className={`${notificationTypeColors[notification.type] || "bg-gray-500"} ml-4 flex-shrink-0`}
                     >
                       {notification.type.replace(/_/g, " ")}
                     </Badge>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center">
-                    <p className="text-xs text-muted-foreground">
+                  <div className="flex justify-between items-center pt-3 border-t border-gray-100">
+                    <p className="text-xs text-[#9ca3af]">
                       {format(parseISO(notification.created_at), "PPP 'a las' p", {
                         locale: es,
                       })}
                     </p>
                     {!notification.is_read && (
-                      <Badge variant="outline" className="text-primary">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-600 border border-blue-200">
                         Nueva
-                      </Badge>
+                      </span>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}

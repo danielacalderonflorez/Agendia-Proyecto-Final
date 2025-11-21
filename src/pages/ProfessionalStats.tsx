@@ -42,7 +42,6 @@ const ProfessionalStats = () => {
         return;
       }
 
-      // Obtener el profesional
       const { data: professional } = await supabase
         .from('professionals')
         .select('id')
@@ -55,7 +54,6 @@ const ProfessionalStats = () => {
         return;
       }
 
-      // Calcular fechas según el período
       const now = new Date();
       let startDate = new Date();
       
@@ -67,7 +65,6 @@ const ProfessionalStats = () => {
         startDate.setMonth(now.getMonth() - 1);
       }
 
-      // Obtener todas las citas del profesional en el período
       const { data: appointments } = await supabase
         .from('appointments')
         .select('*, profiles!appointments_client_id_fkey(full_name)')
@@ -79,7 +76,6 @@ const ProfessionalStats = () => {
         return;
       }
 
-      // Calcular estadísticas
       const total = appointments.length;
       const confirmadas = appointments.filter(a => a.status === 'aceptada').length;
       const canceladas = appointments.filter(a => a.status === 'cancelada').length;
@@ -89,21 +85,18 @@ const ProfessionalStats = () => {
         a.status === 'pendiente_aceptacion' || a.status === 'pagada'
       ).length;
 
-      // Tasa de cancelación (asumiendo que las canceladas con razón son del cliente)
       const cancelacionesCliente = appointments.filter(a => 
         a.status === 'cancelada' && a.cancellation_reason
       ).length;
       const tasaCancelacionCliente = total > 0 ? (cancelacionesCliente / total) * 100 : 0;
       const tasaCancelacionProfesional = total > 0 ? (rechazadas / total) * 100 : 0;
 
-      // Obtener disponibilidad del profesional
       const { data: availabilities } = await supabase
         .from('availabilities')
         .select('*')
         .eq('professional_id', professional.id)
         .eq('is_active', true);
 
-      // Calcular horas disponibles y ocupadas
       let horasDisponibles = 0;
       if (availabilities) {
         availabilities.forEach(av => {
@@ -111,7 +104,6 @@ const ProfessionalStats = () => {
           const end = new Date(`2000-01-01T${av.end_time}`);
           const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
           
-          // Multiplicar por días en el período
           const daysInPeriod = period === 'day' ? 1 : period === 'week' ? 7 : 30;
           horasDisponibles += hours * daysInPeriod;
         });
@@ -128,11 +120,9 @@ const ProfessionalStats = () => {
 
       const tasaOcupacion = horasDisponibles > 0 ? (horasOcupadas / horasDisponibles) * 100 : 0;
 
-      // Promedio de citas atendidas
       const daysInPeriod = period === 'day' ? 1 : period === 'week' ? 7 : 30;
       const promedioAtendidas = (confirmadas + completadas) / daysInPeriod;
 
-      // Días más demandados
       const diasMasDemandados: { [key: string]: number } = {};
       const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
       
@@ -142,7 +132,6 @@ const ProfessionalStats = () => {
         diasMasDemandados[dayName] = (diasMasDemandados[dayName] || 0) + 1;
       });
 
-      // Horarios más demandados
       const horariosMasDemandados: { [key: string]: number } = {};
       appointments.forEach(a => {
         const hour = a.start_time.substring(0, 5);
@@ -175,10 +164,10 @@ const ProfessionalStats = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Cargando estadísticas...</div>
+        <div className="container mx-auto px-4 py-12 text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
         </div>
       </div>
     );
@@ -186,10 +175,10 @@ const ProfessionalStats = () => {
 
   if (!stats) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">No hay datos disponibles</div>
+        <div className="max-w-[1200px] mx-auto px-8 py-8 mt-24">
+          <div className="text-center text-[#6b7280]">No hay datos disponibles</div>
         </div>
       </div>
     );
@@ -208,204 +197,209 @@ const ProfessionalStats = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Estadísticas</h1>
-          <p className="text-muted-foreground">Analiza el rendimiento de tus citas</p>
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
+        <div className="mb-8 mt-24">
+          <h1 className="text-[1.875rem] font-bold text-gray-900 mb-2">Estadísticas</h1>
+          <p className="text-[#6b7280] text-base">Analiza el rendimiento de tus citas</p>
         </div>
 
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as any)} className="mb-6">
-          <TabsList>
-            <TabsTrigger value="day">Día</TabsTrigger>
-            <TabsTrigger value="week">Semana</TabsTrigger>
-            <TabsTrigger value="month">Mes</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="mb-6">
+          <div className="inline-flex gap-2 bg-white p-1 rounded-lg border border-gray-200">
+            <button
+              onClick={() => setPeriod('day')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                period === 'day' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Día
+            </button>
+            <button
+              onClick={() => setPeriod('week')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                period === 'week' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Semana
+            </button>
+            <button
+              onClick={() => setPeriod('month')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${
+                period === 'month' 
+                  ? 'bg-blue-600 text-white' 
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Mes
+            </button>
+          </div>
+        </div>
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Citas</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
-                En el período seleccionado
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 mb-6">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Total de Citas</h3>
+              <Calendar className="h-5 w-5 text-[#6b7280]" />
+            </div>
+            <div className="text-3xl font-bold text-blue-600">{stats.total}</div>
+            <p className="text-xs text-[#6b7280] mt-1">
+              En el período seleccionado
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Confirmadas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.confirmadas}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.total > 0 ? ((stats.confirmadas / stats.total) * 100).toFixed(1) : 0}% del total
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Confirmadas</h3>
+              <CheckCircle className="h-5 w-5 text-green-500" />
+            </div>
+            <div className="text-3xl font-bold text-blue-600">{stats.confirmadas}</div>
+            <p className="text-xs text-[#6b7280] mt-1">
+              {stats.total > 0 ? ((stats.confirmadas / stats.total) * 100).toFixed(1) : 0}% del total
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Completadas</CardTitle>
-              <CheckCircle className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.completadas}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.total > 0 ? ((stats.completadas / stats.total) * 100).toFixed(1) : 0}% del total
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Completadas</h3>
+              <CheckCircle className="h-5 w-5 text-blue-500" />
+            </div>
+            <div className="text-3xl font-bold text-blue-600">{stats.completadas}</div>
+            <p className="text-xs text-[#6b7280] mt-1">
+              {stats.total > 0 ? ((stats.completadas / stats.total) * 100).toFixed(1) : 0}% del total
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pendientes</CardTitle>
-              <AlertCircle className="h-4 w-4 text-yellow-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.pendientes}</div>
-              <p className="text-xs text-muted-foreground">
-                Por confirmar
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Pendientes</h3>
+              <AlertCircle className="h-5 w-5 text-yellow-500" />
+            </div>
+            <div className="text-3xl font-bold text-blue-600">{stats.pendientes}</div>
+            <p className="text-xs text-[#6b7280] mt-1">
+              Por confirmar
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Canceladas</CardTitle>
-              <XCircle className="h-4 w-4 text-red-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.canceladas}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.tasaCancelacionCliente.toFixed(1)}% tasa
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Canceladas</h3>
+              <XCircle className="h-5 w-5 text-red-500" />
+            </div>
+            <div className="text-3xl font-bold text-blue-600">{stats.canceladas}</div>
+            <p className="text-xs text-[#6b7280] mt-1">
+              {stats.tasaCancelacionCliente.toFixed(1)}% tasa
+            </p>
+          </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Rechazadas</CardTitle>
-              <XCircle className="h-4 w-4 text-orange-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.rechazadas}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.tasaCancelacionProfesional.toFixed(1)}% tasa
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] p-6">
+            <div className="flex justify-between items-start mb-3">
+              <h3 className="text-sm font-medium text-gray-700">Rechazadas</h3>
+              <XCircle className="h-5 w-5 text-orange-500" />
+            </div>
+            <div className="text-3xl font-bold text-blue-600">{stats.rechazadas}</div>
+            <p className="text-xs text-[#6b7280] mt-1">
+              {stats.tasaCancelacionProfesional.toFixed(1)}% tasa
+            </p>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 mb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Ocupación del Horario
-              </CardTitle>
-              <CardDescription>Horas disponibles vs ocupadas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Ocupación del Horario</h2>
+              <p className="text-sm text-[#6b7280] mt-1">Horas disponibles vs ocupadas</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Horas disponibles:</span>
-                  <span className="font-medium">{stats.horasDisponibles.toFixed(1)}h</span>
+                  <span className="text-sm text-[#6b7280]">Horas disponibles:</span>
+                  <span className="font-semibold text-gray-900">{stats.horasDisponibles.toFixed(1)}h</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-sm text-muted-foreground">Horas ocupadas:</span>
-                  <span className="font-medium">{stats.horasOcupadas.toFixed(1)}h</span>
+                  <span className="text-sm text-[#6b7280]">Horas ocupadas:</span>
+                  <span className="font-semibold text-gray-900">{stats.horasOcupadas.toFixed(1)}h</span>
                 </div>
-                <div className="pt-2 border-t">
+                <div className="pt-3 border-t border-gray-200">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm font-medium">Tasa de ocupación:</span>
-                    <span className="text-2xl font-bold text-primary">
+                    <span className="text-sm font-medium text-gray-700">Tasa de ocupación:</span>
+                    <span className="text-3xl font-bold text-blue-600">
                       {stats.tasaOcupacion.toFixed(1)}%
                     </span>
                   </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Promedio de Atención
-              </CardTitle>
-              <CardDescription>Citas atendidas por {period === 'day' ? 'día' : period === 'week' ? 'semana' : 'mes'}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-primary">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Promedio de Atención</h2>
+              <p className="text-sm text-[#6b7280] mt-1">
+                Citas atendidas por {period === 'day' ? 'día' : period === 'week' ? 'semana' : 'mes'}
+              </p>
+            </div>
+            <div className="p-6">
+              <div className="text-4xl font-bold text-blue-600">
                 {stats.promedioAtendidas.toFixed(1)}
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
+              <p className="text-sm text-[#6b7280] mt-2">
                 citas atendidas en promedio
               </p>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Días Más Demandados
-              </CardTitle>
-              <CardDescription>Top 3 días con más citas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Días Más Demandados</h2>
+              <p className="text-sm text-[#6b7280] mt-1">Top 3 días con más citas</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-3">
                 {getTopDays().map(([day, count], index) => (
-                  <div key={day} className="flex justify-between items-center">
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
-                      <span>{day}</span>
+                  <div key={day} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-blue-600">#{index + 1}</span>
+                      <span className="font-medium text-gray-900">{day}</span>
                     </span>
-                    <span className="font-bold">{count} citas</span>
+                    <span className="font-bold text-blue-600">{count} citas</span>
                   </div>
                 ))}
                 {getTopDays().length === 0 && (
-                  <p className="text-sm text-muted-foreground">No hay datos disponibles</p>
+                  <p className="text-sm text-[#6b7280] text-center py-4">No hay datos disponibles</p>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Horarios Más Demandados
-              </CardTitle>
-              <CardDescription>Top 5 horarios más solicitados</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Horarios Más Demandados</h2>
+              <p className="text-sm text-[#6b7280] mt-1">Top 5 horarios más solicitados</p>
+            </div>
+            <div className="p-6">
+              <div className="space-y-3">
                 {getTopHours().map(([hour, count], index) => (
-                  <div key={hour} className="flex justify-between items-center">
-                    <span className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
-                      <span>{hour}</span>
+                  <div key={hour} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <span className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-blue-600">#{index + 1}</span>
+                      <span className="font-medium text-gray-900">{hour}</span>
                     </span>
-                    <span className="font-bold">{count} citas</span>
+                    <span className="font-bold text-blue-600">{count} citas</span>
                   </div>
                 ))}
                 {getTopHours().length === 0 && (
-                  <p className="text-sm text-muted-foreground">No hay datos disponibles</p>
+                  <p className="text-sm text-[#6b7280] text-center py-4">No hay datos disponibles</p>
                 )}
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>

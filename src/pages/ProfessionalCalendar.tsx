@@ -59,7 +59,6 @@ const ProfessionalCalendar = () => {
         return;
       }
 
-      // Obtener el profesional
       const { data: professional } = await supabase
         .from('professionals')
         .select('id')
@@ -74,7 +73,6 @@ const ProfessionalCalendar = () => {
 
       setProfessionalId(professional.id);
 
-      // Obtener todas las citas del profesional
       const { data: appointmentsData, error } = await supabase
         .from('appointments')
         .select(`
@@ -123,65 +121,67 @@ const ProfessionalCalendar = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="container mx-auto px-4 py-8">
-          <div className="text-center">Cargando calendario...</div>
+        <div className="container mx-auto px-4 py-12 text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent"></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Mi Calendario</h1>
-          <p className="text-muted-foreground">Visualiza todas tus citas programadas</p>
+      <div className="max-w-[1200px] mx-auto px-8 py-8">
+        <div className="mb-8 mt-24">
+          <h1 className="text-[1.875rem] font-bold text-gray-900 mb-2">Mi Calendario</h1>
+          <p className="text-[#6b7280] text-base">Visualiza todas tus citas programadas</p>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Selecciona una fecha</CardTitle>
-              <CardDescription>
+          {/* Calendar Card */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Selecciona una fecha</h2>
+              <p className="text-sm text-[#6b7280] mt-1">
                 Las fechas con citas están marcadas
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex justify-center">
+              </p>
+            </div>
+            <div className="p-6 flex justify-center">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 locale={es}
-                className="rounded-md border"
+                className="rounded-md border border-gray-200"
                 modifiers={{
                   hasAppointment: getDatesWithAppointments()
                 }}
                 modifiersStyles={{
                   hasAppointment: {
                     fontWeight: 'bold',
-                    backgroundColor: 'hsl(var(--primary) / 0.2)',
-                    color: 'hsl(var(--primary))'
+                    backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                    color: '#2563eb'
                   }
                 }}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>
+          {/* Appointments List Card */}
+          <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)]">
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">
                 Citas del {selectedDate ? format(selectedDate, "d 'de' MMMM, yyyy", { locale: es }) : ''}
-              </CardTitle>
-              <CardDescription>
+              </h2>
+              <p className="text-sm text-[#6b7280] mt-1">
                 {selectedDateAppointments.length} cita{selectedDateAppointments.length !== 1 ? 's' : ''} programada{selectedDateAppointments.length !== 1 ? 's' : ''}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+              </p>
+            </div>
+            <div className="p-6">
               {selectedDateAppointments.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
+                <p className="text-sm text-[#6b7280] text-center py-8">
                   No hay citas programadas para este día
                 </p>
               ) : (
@@ -189,14 +189,14 @@ const ProfessionalCalendar = () => {
                   {selectedDateAppointments.map((appointment) => (
                     <div
                       key={appointment.id}
-                      className="border rounded-lg p-4 space-y-2 hover:bg-accent/50 transition-colors"
+                      className="border border-gray-200 rounded-lg p-4 space-y-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-300"
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="font-semibold text-foreground">
+                          <p className="font-semibold text-gray-900">
                             {appointment.profiles.full_name}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-[#6b7280]">
                             {appointment.start_time.substring(0, 5)} - {appointment.end_time.substring(0, 5)}
                           </p>
                         </div>
@@ -207,7 +207,7 @@ const ProfessionalCalendar = () => {
                       <div className="flex gap-2 pt-2">
                         <button
                           onClick={() => navigate(`/chat/${appointment.id}`)}
-                          className="text-sm text-primary hover:underline"
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium hover:underline"
                         >
                           Ver chat
                         </button>
@@ -216,44 +216,45 @@ const ProfessionalCalendar = () => {
                   ))}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Resumen de Citas</CardTitle>
-            <CardDescription>Vista general de todas tus citas</CardDescription>
-          </CardHeader>
-          <CardContent>
+        {/* Summary Card */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-[0_2px_8px_rgba(0,0,0,0.08)] mt-6">
+          <div className="p-6 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">Resumen de Citas</h2>
+            <p className="text-sm text-[#6b7280] mt-1">Vista general de todas tus citas</p>
+          </div>
+          <div className="p-6">
             <div className="grid gap-4 md:grid-cols-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-foreground">
+              <div className="text-center p-4 bg-gray-50 rounded-lg">
+                <p className="text-3xl font-bold text-gray-900">
                   {appointments.length}
                 </p>
-                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-sm text-[#6b7280] mt-1">Total</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-500">
+              <div className="text-center p-4 bg-green-50 rounded-lg">
+                <p className="text-3xl font-bold text-green-600">
                   {appointments.filter(a => a.status === 'aceptada').length}
                 </p>
-                <p className="text-sm text-muted-foreground">Aceptadas</p>
+                <p className="text-sm text-[#6b7280] mt-1">Aceptadas</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-orange-500">
+              <div className="text-center p-4 bg-orange-50 rounded-lg">
+                <p className="text-3xl font-bold text-orange-600">
                   {appointments.filter(a => a.status === 'pendiente_aceptacion').length}
                 </p>
-                <p className="text-sm text-muted-foreground">Pendientes</p>
+                <p className="text-sm text-[#6b7280] mt-1">Pendientes</p>
               </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-purple-500">
+              <div className="text-center p-4 bg-purple-50 rounded-lg">
+                <p className="text-3xl font-bold text-purple-600">
                   {appointments.filter(a => a.status === 'completada').length}
                 </p>
-                <p className="text-sm text-muted-foreground">Completadas</p>
+                <p className="text-sm text-[#6b7280] mt-1">Completadas</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );
