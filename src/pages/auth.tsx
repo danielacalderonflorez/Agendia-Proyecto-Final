@@ -7,6 +7,7 @@ import { useNavigate, Link } from "react-router-dom"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { Eye, EyeOff, User, Briefcase } from "lucide-react"
+import logo from "@/assets/logo.png";
 
 const Auth = () => {
   const navigate = useNavigate()
@@ -127,7 +128,7 @@ const Auth = () => {
         <div className="branding-overlay"></div>
         <div className="branding-contenido">
           <div className="logo-section">
-            <img src="/placeholder-logo.png" alt="Logo" className="logo-grande" />
+            <img src={logo} alt="Logo" className="h-10 w-10 object-contain" />
             <h1>Agendia</h1>
             <p className="subtitulo">Tu red profesional</p>
           </div>
