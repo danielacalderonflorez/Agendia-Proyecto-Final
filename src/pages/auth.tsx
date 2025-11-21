@@ -127,8 +127,8 @@ const Auth = () => {
       <div className="auth-branding">
         <div className="branding-overlay"></div>
         <div className="branding-contenido">
-          <div className="logo-section">
-            <img src={logo} alt="Logo" className="h-10 w-10 object-contain" />
+          <div className="logo-section ">
+            <img src={logo} alt="Logo" className="h-30 w-30 object-contain" />
             <h1>Agendia</h1>
             <p className="subtitulo">Tu red profesional</p>
           </div>
