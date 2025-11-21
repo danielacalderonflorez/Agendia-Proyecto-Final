@@ -127,7 +127,7 @@ const Auth = () => {
       <div className="auth-branding">
         <div className="branding-overlay"></div>
         <div className="branding-contenido">
-          <div className="logo-section">
+          <div className="logo-pequeño">
             <img src={logo} alt="Logo" className="h-18 w-18 object-contain" />
             <h1>Agendia</h1>
             <p className="subtitulo">Tu red profesional</p>
@@ -373,6 +373,14 @@ const Auth = () => {
           height: 120px;
           margin-bottom: 20px;
           border-radius: 20px;
+        }
+
+        .logo-pequeño {
+          width: 60px !important;
+          height: 60px !important;
+          object-fit: contain;
+          margin-bottom: 20px;
+          border-radius: 10px;
         }
 
         .logo-section h1 {
